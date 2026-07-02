@@ -4,7 +4,7 @@
 
 Paper: TBD!
 
-![We build three frameworks for conditional generation of trees](figures/full_figure_cropped.pdf)
+![We build three frameworks for conditional generation of trees](figures/full_figure_cropped.png)
 
 
 ## Abstract
