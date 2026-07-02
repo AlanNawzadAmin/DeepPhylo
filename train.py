@@ -60,7 +60,7 @@ def main(cfg: DictConfig):
         wandb_display_name = os.environ.get("WANDB_RUN_NAME") or run_name
         wandb_group = os.environ.get("WANDB_RUN_GROUP")
         wandb_logger = WandbLogger(
-            project="PhyloPFN",
+            project="DeepPhylo",
             entity="eb4727-nyu",
             name=wandb_display_name,
             group=wandb_group,

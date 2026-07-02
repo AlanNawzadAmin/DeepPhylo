@@ -42,8 +42,8 @@ come from CUDA-specific wheels; the sequence simulators (`iqtree`, `kalign3`) co
 from bioconda. Everything else is declared in `pyproject.toml`.
 
 ```bash
-conda create -n phylo4cuda python=3.10 -y
-conda activate phylo4cuda
+conda create -n deepphylo python=3.10 -y
+conda activate deepphylo
 
 # GPU wheels — adjust the CUDA tag (cu130/cu128/cu126) to your driver
 pip install dgl==2.4.0+cu121 -f https://data.dgl.ai/wheels/torch-2.2/cu121/repo.html
@@ -56,7 +56,7 @@ pip install -e .
 ```
 
 Or run `bash setup.sh` to do all of the above in one shot on a fresh machine.
-Afterwards, just `conda activate phylo4cuda` before running.
+Afterwards, just `conda activate deepphylo` before running.
 
 Set `WANDB_API_KEY` to log to Weights & Biases, or pass `use_wandb=false` to disable.
 

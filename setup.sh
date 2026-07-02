@@ -1,5 +1,5 @@
 #!/bin/bash
-# One-shot install into a fresh conda env `phylo4cuda`. Assumes `conda` is already
+# One-shot install into a fresh conda env `deepphylo`. Assumes `conda` is already
 # available (run `conda init` once if not). torch / dgl / flash-attn come from
 # CUDA-specific wheels; everything else is declared in pyproject.toml and pulled in
 # by `pip install -e .`.
@@ -18,8 +18,8 @@ else
     CUDA_TAG="cu126"
 fi
 
-conda create -n phylo4cuda python=3.10 -y
-conda activate phylo4cuda
+conda create -n deepphylo python=3.10 -y
+conda activate deepphylo
 
 pip install dgl==2.4.0+cu121 -f https://data.dgl.ai/wheels/torch-2.2/cu121/repo.html
 pip install torch==2.10.0 --index-url "https://download.pytorch.org/whl/${CUDA_TAG}"
