@@ -1,0 +1,35 @@
+# Sample from a trained checkpoint:
+#   python sample.py run=<checkpoint-dir-name> sampling.path=<out.pkl>
+#
+# `run` names a directory under checkpoints/ (written by train.py, e.g.
+# "slurm-12345"). The model + data config are loaded from
+# checkpoints/<run>/config.yaml; the fields below only set the sampling grid and
+# output path. Results are written to samples/<sampling.path>.
+defaults:
+  - data/dataset_cfg: jc
+  - model: top_down        # placeholder; replaced by checkpoints/<run>/config.yaml
+  - _self_
+
+run: null                  # REQUIRED: checkpoint directory name under checkpoints/
+
+sampling:
+  n_leaves: [25, 35, 45, 55, 65]
+  msa_lengths: [300, 500, 1000, 2600]
+  trees_per_n: 30
+  temperature: 1.0
+  path: samples.pkl        # output file under samples/
+
+seed: 0
+restart: ${run}
+
+data:
+  _target_: src.data.DataModule
+  _recursive_: false
+  val_size: 500
+  batch_size: 1
+  seed: ${seed}
+  num_workers: 0
+  collate_fn: null
+  map_fn: null
+  dataset_cfg:
+    _target_: src.simulation.dataset.SimulatedDataset

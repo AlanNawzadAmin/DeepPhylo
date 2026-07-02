@@ -1,0 +1,73 @@
+defaults:
+  - species_encoder: evopf_middle_out
+  - /data/collate_fn@_global_.data.collate_fn: middle_out
+  - /data/map_fn@_global_.data.map_fn: middle_out
+  - _self_
+
+_target_: src.middle_out.unified.UnifiedMiddleOutModule
+n_max: ${data.dataset_cfg.n_max}
+# Settled width-128 cov default (hidden_dim=128 / n_head=8 / attn n_layers=12 /
+# n_heads=8 / species n_blocks=0 / cov head on, node_attn_then_edge).
+lr: 0.01
+weight_decay: ${weight_decay}
+ema_decay: ${ema_decay}
+warmup_steps: ${warmup_steps}
+mup_mha_fix: ${mup_mha_fix}
+mup_optimizer: ${mup_optimizer}
+rb: ${rb}
+attn_head: ${attn_head}
+full_traj: ${full_traj}
+
+# No EvoPF blocks in the species encoder (matches the top_down/bottom_up cov
+# default); override model.species_encoder.n_blocks to re-enable.
+species_encoder:
+  n_blocks: 0
+
+model_cfg:
+  tree_type: transformer
+  transformer:
+    hidden_dim: 128 #512
+    n_head: 8
+
+  optimizer:
+    maxiter: 1000
+    anneal_freq: 20000
+    anneal_rate: 0.75
+
+rate_predictor:
+  _target_: src.middle_out.unified.MiddleOutMergePredictor
+  n_max: ${model.n_max}
+  h_size: ${model.model_cfg.transformer.hidden_dim}
+  attn_head: ${attn_head}
+  # Settled default: covariance-readout edge head on (was ${cov_attn}; the global
+  # cov_attn flag only fed this). Override model.rate_predictor.cov_head=false for
+  # the original bilinear CLS head.
+  cov_head: true
+  use_input_mlp: ${use_input_mlp}
+  cfg:
+    hidden_dim: ${model.model_cfg.transformer.hidden_dim}
+    n_head: ${model.model_cfg.transformer.n_head}
+  attn_cfg:
+    n_layers: 12
+    n_heads: 8
+    max_spd: 250 #100
+    unpooled: true
+    use_refresh: ${use_refresh}
+    use_cls: ${use_cls}
+    use_pair: ${use_pair}
+    use_hamming: ${use_hamming}
+    use_rope: ${use_rope}
+    use_spd: ${use_spd}
+    use_norm_head: ${use_norm_head}
+    # Cov-head knobs (only read when cov_attn=true; SPDAttentionCovTreeModel):
+    #   cov_edge_mode: where the quartic cov-attention runs vs collapsing the
+    #     [species×node] covariance to edges — "node_attn_then_edge" (default,
+    #     N tokens) or "edge_then_attn" (~2N tokens).
+    #   use_cov_attention / cov_attn_layers: quartic PairAttention over the cov
+    #     grid before readout, and its depth.
+    #   cov_layernorm: affine-normalize the edge cov vector before readout (off →
+    #     keep its magnitude as signal).
+    cov_edge_mode: node_attn_then_edge
+    use_cov_attention: true
+    cov_attn_layers: 2
+    cov_layernorm: false

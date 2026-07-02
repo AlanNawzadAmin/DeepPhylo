@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "phylopfn"
+version = "0.1.0"
+description = "Deep generative models for phylogenetic inference"
+requires-python = ">=3.10"
+# torch, dgl, and flash-attn are installed separately from CUDA-specific wheels
+# (see README / setup.sh); they can't be resolved from PyPI directly.
+dependencies = [
+    "pytorch-lightning",
+    "hydra-core",
+    "wandb",
+    "numpy<2",
+    "tqdm",
+    "biopython",
+    "dendropy",
+    "ete3",
+    "networkx",
+]
+
+[tool.setuptools.packages.find]
+include = ["src*"]
+
+[tool.ruff.lint]
+extend-select = ["I"]
+ignore = ["E702", "E741"]

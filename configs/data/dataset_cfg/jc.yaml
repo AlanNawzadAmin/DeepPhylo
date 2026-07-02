@@ -1,0 +1,19 @@
+n_min: 25
+n_max: 65
+d_min: 300
+d_max: 2600
+d_skew: 3
+cfg:
+  tree:
+    name: pda
+    branch:
+      rate: 10
+      compound: false
+  ali:
+    mode: dna
+    model: JC
+    missing:
+      mean: 0.125
+      scale: 10
+    indels: false
+    freq_filter: 0

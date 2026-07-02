@@ -1,0 +1,4 @@
+_target_: src.top_down.collate_fn_preprocessed
+_partial_: true
+alpha: ${model.alpha}
+biased_schedule: ${importance_sample}

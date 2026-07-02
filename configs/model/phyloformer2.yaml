@@ -1,0 +1,27 @@
+defaults:
+  - species_encoder: evopf
+  - /data/collate_fn@_global_.data.collate_fn: bottom_up
+  - /data/map_fn@_global_.data.map_fn: bottom_up
+  - _self_
+
+_target_: src.bottom_up.unified.UnifiedBottomUpModule
+rb: ${rb}
+attn_head: ${attn_head}
+full_traj: ${full_traj}
+lr: 0.03
+weight_decay: ${weight_decay}
+ema_decay: ${ema_decay}
+warmup_steps: ${warmup_steps}
+mup_mha_fix: ${mup_mha_fix}
+mup_optimizer: ${mup_optimizer}
+offset: null
+offset_gamma: 1.0
+rate_predictor:
+  _target_: src.bottom_up.attention_merge_predictor.AttentionMergePredictor
+  h_size: 128 #512
+  n_layers: 8
+  n_heads: 4 #16
+  max_spd: 250 #100
+  unpooled: true
+  pair_dim: 256
+  pair_inner_dim: 32

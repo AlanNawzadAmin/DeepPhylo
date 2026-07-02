@@ -1,0 +1,38 @@
+.env
+.DS_Store
+outputs
+slurm
+venv
+
+**/.ipynb_checkpoints
+*.egg-info
+*.pyc
+.DS_Store
+.ipynb_checkpoints/
+
+checkpoints
+**.ckpt
+**.tar.gz
+
+penv
+
+alan_mrbayes
+alan_phylobayes
+
+<<<<<<< HEAD
+profile_trace*.json
+*.json
+*.log
+samples/
+/wandb
+=======
+*.json
+*.pkl
+*.pkl.lock
+*.log
+config*.yaml
+>>>>>>> ecb549e (fixes)
+
+# JC marginal-likelihood analysis: ignore run outputs, keep the code
+jc_marglik/*/
+jc_marglik_tmp

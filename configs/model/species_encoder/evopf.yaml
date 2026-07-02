@@ -1,0 +1,11 @@
+_target_: src.evopf.EvoPFSpeciesEncoder
+n_blocks: 12
+n_heads: 4
+embed_dim: 128
+pair_dim: 256
+h_size: ${model.rate_predictor.h_size}
+mode: ${data.dataset_cfg.cfg.ali.mode}
+attn_head: ${attn_head}
+use_rope: ${use_rope}
+mup: ${mup_evopf}
+activation: ${evopf_activation}

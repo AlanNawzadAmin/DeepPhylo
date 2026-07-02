@@ -1,0 +1,41 @@
+# @package _global_
+# Phyloformer 2 baseline (external method, reproduction). Quite different from our
+# cov-head models: the non-cov AttentionMergePredictor head, an EvoPF encoder with
+# 12 blocks, µP OFF, ReLU activations, no RoPE, fp32 training, full-trajectory loss,
+# no importance sampling / Rao-Blackwellization, and the Aldous offset disabled
+# (offset_gamma=0).
+#
+#   python train.py +experiment=phyloformer2 data/dataset_cfg=<jc|cat|indels>
+defaults:
+  - override /model: phyloformer2
+
+# --- global training flags (the model's rb/attn_head/full_traj/weight_decay/
+#     mup_optimizer interpolate from these) ---
+mup_evopf: false
+mup_optimizer: false
+evopf_activation: relu
+use_rope: false
+weight_decay: 0
+precision: 32-true
+importance_sample: false
+rb: false
+attn_head: false
+full_traj: true
+effective_batch_size: 64
+
+# --- model overrides (paper dims + schedule) ---
+model:
+  lr: 1e-4
+  offset_gamma: 0
+  species_encoder:
+    n_blocks: 12
+    embed_dim: 128
+    pair_dim: 256
+    n_heads: 4
+
+# --- data / trainer ---
+data:
+  map_fn:
+    canonicalize_bl: true
+train:
+  gradient_clip_val: null

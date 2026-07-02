@@ -1,0 +1,24 @@
+n_min: 25
+n_max: 65
+d_min: 300
+d_max: 2600
+d_skew: 3
+cfg:
+  tree:
+    name: pda
+    branch:
+      rate: 10
+      compound: false
+  ali:
+    mode: dna
+    model: GTR
+    indels: true
+    realign: true
+    missing:
+      mean: 0.125
+      scale: 10
+    freq_filter: 0.1
+    hyper:
+        max_invariant: 0.4
+        max_ins: 0.01
+        max_del: 0.05

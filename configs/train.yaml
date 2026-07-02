@@ -1,0 +1,90 @@
+defaults:
+  - data/dataset_cfg: jc
+  - model: top_down
+  - _self_
+
+seed: 0
+use_wandb: true
+detect_anomaly: false
+# Lightning Trainer precision. "bf16-mixed" = fp32 master params + bf16 autocast
+# compute (true mixed precision). Override with "bf16-true" for pure bf16
+# (params+activations bf16, no autocast), "32-true" for fp32 (paper), or
+# "16-mixed" for fp16 + grad scaler.
+precision: bf16-mixed
+# Number of unique trees that contribute to one optimizer-step's gradient
+# (= per-rank batch_size × n_gpus × accumulate_grad_batches). train.py derives
+# accumulate_grad_batches from this at startup so the value adapts to the actual
+# GPU count without recomputing by hand.
+effective_batch_size: 32
+restart: null
+rb: true
+attn_head: true
+# middle_out: swap the bilinear CLS edge head for the covariance-readout head
+# (SPDAttentionCovTreeModel). Implies attn_head. Mirrors the top_down cov head.
+cov_attn: false
+full_traj: false
+weight_n_by_difficulty: true
+importance_sample: ${rb}
+is_gamma: 1.0
+weight_decay: 1e-5
+ema_decay: 0.9998
+warmup_steps: 1000
+# Bisect flags for middle_out (plumbed via model/middle_out.yaml; top_down/bottom_up
+# currently ignore them).
+use_refresh: true
+use_cls: true
+use_pair: true
+use_hamming: true
+use_rope: true
+# Top-down cov-head graph-info ablations (honored by model.rate_predictor):
+#   use_spd: SPD shortest-path attention bias in the trunk.
+#   use_node_seed: seed internal nodes from the basis-averaged subtree leaves.
+use_spd: true
+use_node_seed: true
+# Re-anchor missing-leaf queries with PairNorm-style centering+rescaling around
+# the root token's tree embedding before the readout (removed in "no more
+# rescaling"; off by default to preserve current behavior).
+use_norm_head: false
+use_input_mlp: false
+# Gates the µP/CompleteP changes inside EvoPF: 1/n_blocks branch scaling,
+# 1/d_head attention scale in ColAttenPairBias, alignment-aware b_proj init.
+# Set to false to recover the original EvoPF behavior.
+mup_evopf: true
+# Gates the µP fix for nn.MultiheadAttention.in_proj_weight (lr_mult=1/embed_dim
+# instead of 1). null = auto: applied unless full_traj=true, since canon_bl
+# baselines (full_traj=true) were trained without this fix and need the original
+# behavior to reproduce. Set true/false to override.
+mup_mha_fix: null
+# Gates the per-Linear lr_mult=1/fan_in rescaling and per-group eps schedule in
+# configure_optimizers. Set false for plain AdamW (one uniform LR) — needed to
+# reproduce pre-µP runs.
+mup_optimizer: true
+# Pre-norm LayerNorms in the top_down rate predictor's attention stack
+# (col/row/msa-FFN + pair-bias/update/transition). False -> Identity (refresh_ln
+# is always kept; it's structural). Only the top_down model reads this. Disable
+# the norms with use_layernorm=false.
+use_layernorm: true
+# Activation in EvoPF's transition / MSAEmbedder / PairEmbedder. Code default is
+# "gelu"; set "relu" to match the paper's Algorithms S.2/S.3/S.6/S.9.
+evopf_activation: gelu
+# Adam Depth-µP for the top_down rate predictor's attention stack. False (default)
+# = CompleteP (1/L residual-branch scaling, no depth LR rescaling). True switches
+# the branch scaling to 1/√L *and* gives the depth-stack params an extra 1/√L LR.
+depth_mup: false
+
+data:
+  _target_: src.data.DataModule
+  _recursive_: false
+  val_size: 4000
+  batch_size: 1
+  seed: ${seed}
+  num_workers: 16
+  dataset_cfg:
+    _target_: src.simulation.dataset.SimulatedDataset
+    weight_n_by_difficulty: ${weight_n_by_difficulty}
+
+train:
+  max_steps: 1000000
+  # ~25% compute on val w/ hourly checks at ~4.5 iter/s: 12150
+  val_check_interval: 12150
+  gradient_clip_val: 500.0

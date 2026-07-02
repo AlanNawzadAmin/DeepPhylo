@@ -1,0 +1,6 @@
+_target_: src.middle_out.unified.train_map_fn
+_partial_: true
+rb: ${rb}
+attn_head: ${attn_head}
+full_traj: ${full_traj}
+importance_sample: ${importance_sample}

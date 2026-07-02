@@ -1,0 +1,9 @@
+_target_: src.bottom_up.trajectory.map_fn_build_trajectory_example
+_partial_: true
+full_traj: ${full_traj}
+attn_head: ${attn_head}
+rb: ${rb}
+importance_sample: ${importance_sample}
+is_gamma: ${is_gamma}
+canonicalize_bl: false
+canonicalize_hamming: false

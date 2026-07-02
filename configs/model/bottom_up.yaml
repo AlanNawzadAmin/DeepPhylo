@@ -1,0 +1,60 @@
+defaults:
+  - species_encoder: evopf
+  - /data/collate_fn@_global_.data.collate_fn: bottom_up
+  - /data/map_fn@_global_.data.map_fn: bottom_up
+  - _self_
+
+# Bottom up: covariance-readout merge head (CovAttentionMergePredictor).
+_target_: src.bottom_up.unified.UnifiedBottomUpModule
+rb: ${rb}
+attn_head: ${attn_head}
+full_traj: ${full_traj}
+lr: 0.01
+weight_decay: ${weight_decay}
+ema_decay: ${ema_decay}
+warmup_steps: ${warmup_steps}
+mup_mha_fix: ${mup_mha_fix}
+mup_optimizer: ${mup_optimizer}
+# bottom_up only supports "aldous" / None offsets (see UnifiedBottomUpModule
+# ._apply_offset); the top_down "pda" offset is not valid here.
+offset: aldous
+offset_gamma: 1.0
+# Encoder runs 0 EvoPF blocks: graph/structure enters via the rate predictor's
+# SPD-biased trunk, not the species encoder (matches the top_down width sweep).
+species_encoder:
+  n_blocks: 0
+rate_predictor:
+  _target_: src.bottom_up.cov_attention_merge_predictor.CovAttentionMergePredictor
+  h_size: 128
+  n_layers: 12
+  n_heads: 8
+  max_spd: 250 #100
+  unpooled: true
+  pair_dim: 256
+  pair_inner_dim: 32
+  use_layernorm: ${use_layernorm}
+  depth_mup: ${depth_mup}
+  # Covariance-head knobs:
+  # cov_layernorm: affine-normalize c(A,B) before the readout MLP (off → keep
+  #   the covariance magnitude as signal).
+  cov_layernorm: false
+  # use_cov_attention: attention over the upper-triangle covariance vectors (one
+  #   token per candidate merge pair; EvoPF PairAttention, symmetric) before readout.
+  #   Hardcoded on (matches top_down.yaml); the global `cov_attn` flag is middle-out-
+  #   specific. Override per-run with model.rate_predictor.use_cov_attention=false.
+  # cov_attn_layers: depth of that stack.
+  use_cov_attention: true
+  cov_attn_layers: 2
+  # use_second_basis: keep basis channel 1 (squaretrick / unrooted). Set false to
+  #   ablate it (rooted channel only) for the node seed + refresh.
+  use_second_basis: true
+  # Trunk ablation flags (reuse the global toggles; rope intentionally left on).
+  use_pair: ${use_pair}
+  use_refresh: ${use_refresh}
+  use_hamming: ${use_hamming}
+  use_cls: ${use_cls}
+  # use_spd: SPD shortest-path attention bias inside the trunk.
+  # use_node_seed: seed internal nodes from the basis-averaged subtree leaf
+  #   features (off → nodes start at zero, topology only via struct seed + refresh).
+  use_spd: ${use_spd}
+  use_node_seed: ${use_node_seed}
