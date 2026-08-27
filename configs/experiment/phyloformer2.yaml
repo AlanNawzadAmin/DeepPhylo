@@ -16,6 +16,8 @@ mup_optimizer: false
 evopf_activation: relu
 use_rope: false
 weight_decay: 0
+# Phyloformer 2 trains without EMA; decay 0 makes the EMA copy track the live weights.
+ema_decay: 0
 precision: 32-true
 importance_sample: false
 rb: false

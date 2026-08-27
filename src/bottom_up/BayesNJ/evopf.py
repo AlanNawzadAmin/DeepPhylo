@@ -224,7 +224,7 @@ def _rotary_freqs(seq_len, dim, device, base=10_000.0):
 class RowAttenGated(nn.Module):
     def __init__(self, msa_dim: int, n_heads: int, global_token: bool = False,
                  use_rope: bool = True, use_layernorm: bool = True,
-                 mup: bool = True) -> None:
+                 mup: bool = True, pf2_gating: bool = False) -> None:
         super().__init__()
 
         self.msa_dim = msa_dim
@@ -233,6 +233,11 @@ class RowAttenGated(nn.Module):
         self.has_global_token = global_token
         self.use_rope = use_rope
         self.mup = mup
+        # Phyloformer 2's released code builds this block from nn.MultiheadAttention,
+        # so heads are mixed by MHA's bias-free out-projection before the gate;
+        # Algorithm 5 gates per head and mixes once.
+        self.pf2_gating = pf2_gating
+        self.mix_proj = nn.Linear(msa_dim, msa_dim, bias=False) if pf2_gating else None
 
         # Fused QKV projection: one matmul + one DRAM read of `r` instead of
         # three. Output shape [B*n, L, 3*d_m] reshapes for free into the
@@ -242,6 +247,11 @@ class RowAttenGated(nn.Module):
         self.norm = nn.LayerNorm(msa_dim) if use_layernorm else nn.Identity()
         self.g_proj = nn.Linear(msa_dim, msa_dim)
         self.out_proj = nn.Linear(msa_dim, msa_dim)
+
+        if pf2_gating:
+            # MHA xavier-initializes its fused in_proj_weight; nn.Linear(d, 3d)
+            # would be ~22% narrower.
+            nn.init.xavier_uniform_(self.qkv_proj.weight)
 
     def forward(self, msa):
         B, d_m, n, L = msa.size()
@@ -272,8 +282,12 @@ class RowAttenGated(nn.Module):
         # attn_out non-contiguous and let the mul kernel produce a contiguous
         # [B*n, L, H, d_h] output, which views to [B, n, L, d_m] for free.
         attn_out = attn_out.transpose(1, 2)  # [B*n, L, H, d_h] non-contig view
-        g_5d = g.view(B * n, L, self.n_heads, self.head_dim)
-        attn_out = (g_5d * attn_out).view(B, n, L, d_m)
+        if self.pf2_gating:
+            attn_out = self.mix_proj(attn_out.reshape(B * n, L, d_m))
+            attn_out = (g * attn_out).view(B, n, L, d_m)
+        else:
+            g_5d = g.view(B * n, L, self.n_heads, self.head_dim)
+            attn_out = (g_5d * attn_out).view(B, n, L, d_m)
 
         out = self.out_proj(attn_out)
         return out.permute(0, 3, 1, 2).contiguous()  # [B, d_m, n, L]
@@ -432,12 +446,16 @@ class PairAttention(nn.Module):
         n_heads: int,
         symmetric: bool = False,
         mup: bool = True,
+        pf2_gating: bool = False,
     ) -> None:
         super().__init__()
         self.pair_dim = pair_dim
         self.n_heads = n_heads
         self.symmetric = symmetric
         self.mup = mup
+        # Phyloformer 2's released code uses a raw linear gate here; Algorithm 8
+        # specifies a sigmoid.
+        self.pf2_gating = pf2_gating
 
         self.norm = nn.LayerNorm(pair_dim)
         self.mha = nn.MultiheadAttention(
@@ -454,7 +472,7 @@ class PairAttention(nn.Module):
         # Pairs: [B,nC2,d_p]
 
         r = self.norm(pairs)
-        g = F.sigmoid(self.g_proj(r))  # Added sigmoid
+        g = self.g_proj(r) if self.pf2_gating else F.sigmoid(self.g_proj(r))
         k = r * self._k_scale if self.mup else r
         out, _ = self.mha(r, k, r, need_weights=False)
         out = g * out
@@ -466,7 +484,7 @@ class PairAttention(nn.Module):
         B, n, _, d_p = pairs.size()
 
         r = self.norm(pairs).reshape(B * n, n, d_p)
-        g = F.sigmoid(self.g_proj(r))  # Added sigmoid
+        g = self.g_proj(r) if self.pf2_gating else F.sigmoid(self.g_proj(r))
         k = r * self._k_scale if self.mup else r
         out, _ = self.mha(r, k, r, need_weights=False)
         out = (g * out).reshape(B, n, n, d_p)
@@ -504,8 +522,15 @@ class EvoPFBlock(nn.Module):
         # of the carry when mup is on; otherwise full-strength residual adds.
         self.beta = (1.0 / max(n_blocks, 1)) if mup else 1.0
 
+        # EvoPF blocks are only ever built by the Phyloformer 2 baseline (every
+        # model of ours runs species_encoder.n_blocks=0), so they take the gating
+        # of Phyloformer 2's released code. RowAttenGated and PairAttention are
+        # also constructed directly by our SPD trunk and covariance heads, which
+        # follow the published algorithms -- hence a flag rather than a rewrite.
+
         # MSA stack
-        self.row_atten = RowAttenGated(msa_dim, n_heads, use_rope=use_rope, mup=mup)
+        self.row_atten = RowAttenGated(msa_dim, n_heads, use_rope=use_rope, mup=mup,
+                                       pf2_gating=True)
         self.col_atten = ColAttenPairBias(msa_dim, pair_dim, n_heads, symmetric, mup=mup)
         self.msa_trans = MSATransition(msa_dim, activation=activation)
 
@@ -514,7 +539,8 @@ class EvoPFBlock(nn.Module):
             self.pair_update = OuterProductMean(msa_dim, pair_dim, 32, symmetric, mup=mup)
         else:
             self.pair_update = ConcatenationPairUpdate(msa_dim, pair_dim, 32, symmetric)
-        self.pair_atten = PairAttention(pair_dim, n_heads, symmetric, mup=mup)
+        self.pair_atten = PairAttention(pair_dim, n_heads, symmetric, mup=mup,
+                                        pf2_gating=True)
         self.pair_trans = Transition(pair_dim, activation=activation)
 
     def forward(self, msa, pairs):
