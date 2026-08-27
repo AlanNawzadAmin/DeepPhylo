@@ -19,7 +19,9 @@ sampling:
   temperature: 1.0
   path: samples.pkl        # output file under samples/
 
-seed: 0
+# Index of the first tree to sample. Must lie inside the held-out validation
+# range the training run reserved (see prepare_cfg).
+seed: 500
 restart: ${run}
 
 data:
