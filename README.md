@@ -103,3 +103,28 @@ For QuartFormer, `sampling.temperature` picks the decoding: above 0 each draw
 samples every quartet's resolution from the model and runs one puzzling pass, so
 draws approximate the posterior; 0 gives the point estimate (argmax quartets,
 majority consensus over `eval_n_orderings` passes).
+
+## Pretrained checkpoints
+
+The models behind the paper's figures are on the Hugging Face Hub at
+[`eb4727/DeepPhylo`](https://huggingface.co/eb4727/DeepPhylo), one directory per
+`{method}_{dataset}` — method in `BU` / `MO` / `TD` / `PF2` / `QF`, dataset in
+`JC` / `CAT` / `Indels`. Each holds `model.ckpt` and the `config.yaml` of the run
+that produced it, so no further setup is needed.
+
+```bash
+pip install huggingface_hub
+huggingface-cli download eb4727/DeepPhylo --local-dir checkpoints
+```
+
+Add `--include 'BU_JC/*'` to fetch one model instead of all 15. Then decode as
+the paper does — 8 draws at temperature 1, summarized by their majority-rule
+consensus:
+
+```bash
+python sample.py run=BU_JC sampling.temperature=1 \
+    sampling.consensus_n_samples=8 sampling.path=BU_JC_cons8.pkl
+```
+
+This works for every method. A consensus tree can be polytomous where the draws
+disagree, so it may have fewer than N-3 internal edges.
