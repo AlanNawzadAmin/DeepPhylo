@@ -274,7 +274,7 @@ class RowAttenGated(nn.Module):
         q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
         # µP attention scale: 1/d_head (not the default 1/sqrt(d_head)) so logits stay
         # O(1) under feature-learning q/k alignment. Paper (µP off) uses the
-        # default 1/sqrt(d_head), matching repo_pf2's nn.MultiheadAttention.
+        # default 1/sqrt(d_head), matching Phyloformer 2's nn.MultiheadAttention.
         attn_out = F.scaled_dot_product_attention(
             q, k, v, scale=(1.0 / self.head_dim) if self.mup else None
         )

@@ -61,8 +61,8 @@ class MSAEmbedder(nn.Module):
             self.embed = nn.Embedding(vocab_size, embed_dim)
         else:
             # Paper-exact (Algorithm S.2): 1x1 conv over the one-hot vocab axis,
-            # with default Conv2d init (incl. bias). Matches repo_pf2 / the paper
-            # when µP is off.
+            # with default Conv2d init (incl. bias). Matches Phyloformer 2's
+            # released code and the paper when µP is off.
             self.conv = nn.Conv2d(vocab_size, embed_dim, kernel_size=1, stride=1)
 
     def forward(self, input):
