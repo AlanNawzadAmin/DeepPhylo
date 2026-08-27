@@ -26,6 +26,7 @@ For all three generative paradigms, our models fit the data substantially better
 | `bottom_up`  | Bottom up  |
 | `top_down`   | Top down   |
 | `phyloformer2` (baseline) | Phyloformer 2 |
+| `quartformer` (baseline)  | QuartFormer   |
 
 ## Datasets
 
@@ -68,7 +69,11 @@ python train.py model=middle_out   data/dataset_cfg=jc
 python train.py model=bottom_up    data/dataset_cfg=cat
 python train.py model=top_down     data/dataset_cfg=indels
 python train.py +experiment=phyloformer2 data/dataset_cfg=jc   # baseline
+python train.py model=quartformer data/dataset_cfg=jc train.gradient_clip_val=1.0
 ```
+
+QuartFormer needs the tighter gradient clip; the default of 500 is set for the
+diffusion models.
 
 Multi-GPU is automatic (DDP). `effective_batch_size` is held fixed regardless of
 GPU count — `train.py` derives gradient accumulation from it. Checkpoints and the
@@ -91,3 +96,8 @@ Samples are written to `samples/<sampling.path>` as a pickled list of
 `(n_leaves, msa_length, i, true_newick, sampled_newick, seconds)` tuples. The
 sampling grid is set by `sampling.n_leaves`, `sampling.msa_lengths`, and
 `sampling.trees_per_n`; temperature by `sampling.temperature`.
+
+For QuartFormer, `sampling.temperature` picks the decoding: above 0 each draw
+samples every quartet's resolution from the model and runs one puzzling pass, so
+draws approximate the posterior; 0 gives the point estimate (argmax quartets,
+majority consensus over `eval_n_orderings` passes).

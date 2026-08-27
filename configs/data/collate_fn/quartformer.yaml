@@ -1,0 +1,2 @@
+_target_: src.data.collate_fn_seqs_trees_weights
+_partial_: true
