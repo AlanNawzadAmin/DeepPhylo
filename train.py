@@ -61,7 +61,7 @@ def main(cfg: DictConfig):
         wandb_group = os.environ.get("WANDB_RUN_GROUP")
         wandb_logger = WandbLogger(
             project="DeepPhylo",
-            entity="eb4727-nyu",
+            entity=cfg.wandb_entity,
             name=wandb_display_name,
             group=wandb_group,
         )

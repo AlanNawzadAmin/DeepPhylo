@@ -59,7 +59,9 @@ pip install -e .
 Or run `bash setup.sh` to do all of the above in one shot on a fresh machine.
 Afterwards, just `conda activate deepphylo` before running.
 
-Set `WANDB_API_KEY` to log to Weights & Biases, or pass `use_wandb=false` to disable.
+Set `WANDB_API_KEY` to log to Weights & Biases, or pass `use_wandb=false` to
+disable. Runs go to the `DeepPhylo` project under your default entity; pass
+`wandb_entity=<team>` to log somewhere else.
 
 ## Training
 

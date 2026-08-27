@@ -5,6 +5,8 @@ defaults:
 
 seed: 0
 use_wandb: true
+# W&B team/username to log under. null uses $WANDB_ENTITY, or your default entity.
+wandb_entity: null
 detect_anomaly: false
 # Lightning Trainer precision. "bf16-mixed" = fp32 master params + bf16 autocast
 # compute (true mixed precision). Override with "bf16-true" for pure bf16
