@@ -1,3 +1,4 @@
+import heapq
 import math
 from itertools import combinations
 
@@ -212,13 +213,33 @@ def _estimate_bl_forced_nj(ete_tree: Tree, seqs: torch.Tensor) -> dict:
     return edge_bls
 
 
-def _children_bl_sum(graph: dgl.DGLGraph, node: int) -> float:
-    """Sum of branch lengths from a node's children to this node."""
-    total = 0.0
-    for child in graph.predecessors(node):
-        eid = graph.edge_ids(child, node)
-        total += graph.edata["bl"][eid].item()
-    return total
+def _canonical_merge_order(graph: dgl.DGLGraph) -> list:
+    """Phyloformer 2's canonical merge order (arXiv:2510.12976, Sec. 3.2): at each
+    step merge the two closest available nodes, i.e. take the mergeable internal
+    node with the smallest cherry length. Returned bottom-up (children first)."""
+    bl_sums = torch.zeros(graph.num_nodes())
+    _, dst = graph.edges()
+    bl_sums.index_add_(0, dst.cpu(), graph.edata["bl"].cpu().float())
+
+    internal = graph.in_degrees().eq(2).nonzero().squeeze(-1).tolist()
+    children = {v: [int(c) for c in graph.predecessors(v).tolist()] for v in internal}
+    internal_set = set(internal)
+    parent = {c: v for v, cs in children.items() for c in cs}
+    # A node is mergeable once its internal children have merged; leaves are ready.
+    pending = {v: sum(1 for c in children[v] if c in internal_set) for v in internal}
+
+    heap = [(float(bl_sums[v]), v) for v in internal if pending[v] == 0]
+    heapq.heapify(heap)
+    order = []
+    while heap:
+        _, v = heapq.heappop(heap)
+        order.append(v)
+        p = parent.get(v)
+        if p is not None:
+            pending[p] -= 1
+            if pending[p] == 0:
+                heapq.heappush(heap, (float(bl_sums[p]), p))
+    return order
 
 
 def run_forward_noising_process(
@@ -234,14 +255,18 @@ def run_forward_noising_process(
     exposed_nodes = roots[:]
     exposed_roots = [r for r in roots if graph.in_degrees(r) == 2]
 
+    # This loop walks the REMOVAL sequence, which is the reverse of the merge
+    # sequence, so the greedy criterion cannot be applied here directly: taking
+    # the smallest cherry first on removal merges it last.
+    removal_plan = (
+        list(reversed(_canonical_merge_order(graph))) if canonicalize_bl else None
+    )
+
     candidate_pairs = []
     removed_order = []
     for m in range(M):
         if canonicalize_bl:
-            root = min(
-                exposed_roots,
-                key=lambda r: (_children_bl_sum(graph, r), r),
-            )
+            root = removal_plan[m]
         else:
             weights = graph.ndata["internal_n"][exposed_roots].squeeze(-1)
             picked_idx = torch.multinomial(weights, 1).item()

@@ -68,10 +68,21 @@ def prepare_cfg(cfg: DictConfig):
     cfg.data.map_fn = SAMPLING_MAP_FN
     cfg.data.batch_size = 1
     cfg.data.num_workers = 0
-    # The training config bakes in its own data.seed; let the sampling CLI `seed`
-    # drive the simulated trees so a cell can be sharded across distinct seed
-    # bands. No-op at the default seed=0 (matches the training data.seed).
+
+    # Sample the validation split, never the training stream. DataModule reserves
+    # seeds [data.seed, data.seed + data.val_size) for validation and trains on
+    # everything above; `seed` picks the band inside the reserved range, so the
+    # trees are identical across runs whatever val_size a training config baked in.
+    held_out_start = cfg.data.seed
+    held_out_stop = cfg.data.seed + cfg.data.val_size
+    n_trees = cfg.sampling.trees_per_n
+    if cfg.seed < held_out_start or cfg.seed + n_trees > held_out_stop:
+        raise ValueError(
+            f"sampling seeds [{cfg.seed}, {cfg.seed + n_trees}) fall outside the "
+            f"run's held-out range [{held_out_start}, {held_out_stop})"
+        )
     cfg.data.seed = cfg.seed
+    cfg.data.val_size = n_trees
 
 
 def _existing_cell_counts(samples_path: Path) -> dict:
@@ -128,7 +139,7 @@ def iter_batches(cfg: DictConfig):
 
             for i, batch in enumerate(
                 tqdm(
-                    datamodule.train_dataloader(),
+                    datamodule.val_dataloader(),
                     total=cfg.sampling.trees_per_n,
                     desc=f"n={n_leaves} d={msa_length}",
                 )

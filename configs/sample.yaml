@@ -17,9 +17,15 @@ sampling:
   msa_lengths: [300, 500, 1000, 2600]
   trees_per_n: 30
   temperature: 1.0
+  # >1 draws that many trees and returns their majority-rule consensus, which is
+  # how the paper decodes (8 draws at temperature 1).
+  consensus_n_samples: 1
+  consensus_min_freq: 0.5
   path: samples.pkl        # output file under samples/
 
-seed: 0
+# Index of the first tree to sample. Must lie inside the held-out validation
+# range the training run reserved (see prepare_cfg).
+seed: 500
 restart: ${run}
 
 data:

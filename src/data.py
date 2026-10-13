@@ -14,6 +14,15 @@ def collate_fn_seqs_and_trees(batch):
     return seqs, trees
 
 
+def collate_fn_seqs_trees_weights(batch):
+    """collate_fn_seqs_and_trees plus the per-tree difficulty importance weight,
+    so QuartFormer can undo the dataset's oversampling of large N."""
+    seqs = torch.stack([b[1] for b in batch])
+    trees = [b[0] for b in batch]
+    weights = torch.tensor([float(b[2]) for b in batch])
+    return seqs, trees, weights
+
+
 def dummy_map_fn(sample):
     return sample
 

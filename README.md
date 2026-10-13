@@ -26,6 +26,7 @@ For all three generative paradigms, our models fit the data substantially better
 | `bottom_up`  | Bottom up  |
 | `top_down`   | Top down   |
 | `phyloformer2` (baseline) | Phyloformer 2 |
+| `quartformer` (baseline)  | QuartFormer   |
 
 ## Datasets
 
@@ -58,7 +59,9 @@ pip install -e .
 Or run `bash setup.sh` to do all of the above in one shot on a fresh machine.
 Afterwards, just `conda activate deepphylo` before running.
 
-Set `WANDB_API_KEY` to log to Weights & Biases, or pass `use_wandb=false` to disable.
+Set `WANDB_API_KEY` to log to Weights & Biases, or pass `use_wandb=false` to
+disable. Runs go to the `DeepPhylo` project under your default entity; pass
+`wandb_entity=<team>` to log somewhere else.
 
 ## Training
 
@@ -68,6 +71,7 @@ python train.py model=middle_out   data/dataset_cfg=jc
 python train.py model=bottom_up    data/dataset_cfg=cat
 python train.py model=top_down     data/dataset_cfg=indels
 python train.py +experiment=phyloformer2 data/dataset_cfg=jc   # baseline
+python train.py model=quartformer data/dataset_cfg=jc train.gradient_clip_val=1.0
 ```
 
 Multi-GPU is automatic (DDP). `effective_batch_size` is held fixed regardless of
@@ -91,3 +95,21 @@ Samples are written to `samples/<sampling.path>` as a pickled list of
 `(n_leaves, msa_length, i, true_newick, sampled_newick, seconds)` tuples. The
 sampling grid is set by `sampling.n_leaves`, `sampling.msa_lengths`, and
 `sampling.trees_per_n`; temperature by `sampling.temperature`.
+
+## Pretrained checkpoints
+
+We release pre-trained checkpoints on HuggingFace at [`eb4727/DeepPhylo`](https://huggingface.co/eb4727/DeepPhylo).
+
+```bash
+pip install huggingface_hub
+huggingface-cli download eb4727/DeepPhylo --local-dir checkpoints
+```
+
+Add `--include 'BU_JC/*'` to fetch one model instead of all 15.
+
+To sample using the protocol in our paper, use:
+
+```bash
+python sample.py run=BU_JC sampling.temperature=1 \
+    sampling.consensus_n_samples=8 sampling.path=BU_JC_cons8.pkl
+```

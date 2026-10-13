@@ -1,0 +1,60 @@
+defaults:
+  - /data/collate_fn@_global_.data.collate_fn: quartformer
+  - /data/map_fn@_global_.data.map_fn: dummy
+  - _self_
+
+_target_: src.quartformer.module.QuartFormerModule
+
+# Alphabet is read from the dataset (dna -> vocab 7, aa -> vocab 23).
+mode: ${data.dataset_cfg.cfg.ali.mode}
+
+# The LR the QuartFormer paper trains at. Run with train.gradient_clip_val=1.0;
+# the default 500 is tuned for the diffusion models and is far too loose here.
+lr: 0.01
+weight_decay: ${weight_decay}
+ema_decay: ${ema_decay}
+warmup_steps: ${warmup_steps}
+mup_mha_fix: ${mup_mha_fix}
+mup_optimizer: ${mup_optimizer}
+
+# QuartFormer structure. A training step samples `n_blocks_train` blocks of
+# `block_size` taxa from one tree and classifies all C(block_size,4) quartets.
+# Blocks are batched through the net in one forward, so n_blocks_train is the
+# main GPU-utilization knob.
+block_size: 16
+n_blocks_train: 8
+n_blocks_val: 8
+# Scale the per-tree loss by the difficulty importance weight so the effective
+# tree-size distribution matches the other models (dataset oversamples large N).
+importance_weight: true
+
+# Transformer over quartet tokens (sparse: a quartet attends only to quartets
+# sharing >=3 taxa).
+token_dim: 256
+n_heads: 8
+n_layers: 3
+ffn_dim: 512
+
+# Per-quartet feature extractor (learned column embedding, mean-pooled over
+# sites — a learned site-pattern-frequency summary).
+embed_dim: 16
+feat_hidden: 256
+feat_dim: 128
+site_chunk: 512
+
+# Columns used per training step (unbiased i.i.d. subsample; bounds backprop
+# memory since MSA length reaches 2600). Eval uses the full alignment.
+max_sites_train: 512
+eval_max_sites: null
+
+# Eval / quartet-puzzling assembly knobs.
+eval_min_per_taxon: 40
+eval_n_orderings: 50
+eval_max_quartets_per_insertion: 400
+eval_block_batch: 16
+
+# Cheap RF proxy logged during validation (a few trees, reduced puzzling cost).
+monitor_rf: true
+monitor_rf_n_trees: 3
+monitor_rf_min_per_taxon: 12
+monitor_rf_n_orderings: 10
