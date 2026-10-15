@@ -2,7 +2,7 @@
 
 [Ethan Baron](https://baronet2.github.io/)\*, [Alan N. Amin](https://alannawzadamin.github.io)\*, [Andrew Gordon Wilson](https://cims.nyu.edu/~andrewgw/). * equal contribution
 
-Paper: TBD!
+Paper: https://arxiv.org/abs/2610.19053
 
 ![We build three frameworks for conditional generation of trees](figures/full_figure_cropped.png)
 
@@ -18,25 +18,25 @@ To accurately represent the complex posterior distributions over tree topologies
 We use a discrete diffusion framework to train these models efficiently on large-scale simulated datasets of phylogenetic trees.
 For all three generative paradigms, our models fit the data substantially better than the previous state-of-the-art simulation-based method, Phyloformer 2, and obtain more accurate posteriors on real datasets. Finally, our models outperform misspecified conventional methods on data following complex evolutionary processes.
 
-## Models
+## Citation
 
-| `model=` | Name |
-|----------|------|
-| `middle_out` | Middle out |
-| `bottom_up`  | Bottom up  |
-| `top_down`   | Top down   |
-| `phyloformer2` (baseline) | Phyloformer 2 |
-| `quartformer` (baseline)  | QuartFormer   |
+If you use our work, please cite our paper:
 
-## Datasets
+```
+@misc{DeepPhylo,
+      title={Deep Generative Models for Phylogenetic Inference with Complex Evolutionary Processes}, 
+      author={Ethan Baron and Alan N. Amin and Andrew Gordon Wilson},
+      year={2026},
+      eprint={2610.19053},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2610.19053}, 
+}
+```
 
-Pick the alignment simulator with `data/dataset_cfg=<jc|cat|indels>`:
+## Usage
 
-- `jc` — DNA under Jukes–Cantor.
-- `cat` — amino acids under the CAT mixture model.
-- `indels` — DNA under GTR with indels + realignment.
-
-## Setup
+### Setup
 
 Requires Python 3.10, conda, and an NVIDIA GPU. `torch`, `dgl`, and `flash-attn`
 come from CUDA-specific wheels; the sequence simulators (`iqtree`, `kalign3`) come
@@ -63,7 +63,25 @@ Set `WANDB_API_KEY` to log to Weights & Biases, or pass `use_wandb=false` to
 disable. Runs go to the `DeepPhylo` project under your default entity; pass
 `wandb_entity=<team>` to log somewhere else.
 
-## Training
+### Models
+
+| `model=` | Name |
+|----------|------|
+| `middle_out` | Middle out |
+| `bottom_up`  | Bottom up  |
+| `top_down`   | Top down   |
+| `phyloformer2` (baseline) | Phyloformer 2 |
+| `quartformer` (baseline)  | QuartFormer   |
+
+### Datasets
+
+Pick the alignment simulator with `data/dataset_cfg=<jc|cat|indels>`:
+
+- `jc` — DNA under Jukes–Cantor.
+- `cat` — amino acids under the CAT mixture model.
+- `indels` — DNA under GTR with indels + realignment.
+
+### Training
 
 Example commands:
 ```bash
@@ -82,7 +100,7 @@ In our paper we ran our models for 48 hours on two A100s.
 
 To resume from a checkpoint, pass `restart=<run>`.
 
-## Sampling
+### Sampling
 
 Sampling loads the model + data config from the training checkpoint, so you only
 name the run and an output file:
@@ -96,7 +114,7 @@ Samples are written to `samples/<sampling.path>` as a pickled list of
 sampling grid is set by `sampling.n_leaves`, `sampling.msa_lengths`, and
 `sampling.trees_per_n`; temperature by `sampling.temperature`.
 
-## Pretrained checkpoints
+### Pretrained checkpoints
 
 We release pre-trained checkpoints on HuggingFace at [`eb4727/DeepPhylo`](https://huggingface.co/eb4727/DeepPhylo).
 
@@ -110,6 +128,5 @@ Add `--include 'BU_JC/*'` to fetch one model instead of all 15.
 To sample using the protocol in our paper, use:
 
 ```bash
-python sample.py run=BU_JC sampling.temperature=1 \
-    sampling.consensus_n_samples=8 sampling.path=BU_JC_cons8.pkl
+python sample.py run=BU_JC sampling.temperature=1 sampling.consensus_n_samples=8 sampling.path=BU_JC_cons8.pkl
 ```
